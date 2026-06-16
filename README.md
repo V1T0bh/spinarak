@@ -20,7 +20,7 @@ For fun, Spinarak stores screenshots of hits under the `/hits/` directory of the
   - `GMAIL_RECIPIENT_2`
   - `GMAIL_SENDER`
 4. Update the `cron` line on `spinarak.yml` to suit your needs. The more frequent the action runs, the more likely Spinarak will find an open slot
-5. By default Sinarak checks for availability for a party of 3. You can increase your party size by updating the `num_of_guests` variable in `spinarak.py`
+5. By default Sinarak checks Osaka for a party of 2. The current target slots are July 28 at 17:30 or later, July 29 anytime, and July 30 anytime. You can change these by updating `location`, `num_of_guests`, and `target_slot_rules` in `spinarak.py`
 
 ## Billing portential warning
 Please note that if you fork this repo as a private repo, you may go above your free Actions minutes which means **you'll be billed**.

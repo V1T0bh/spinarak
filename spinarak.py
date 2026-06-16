@@ -1,5 +1,5 @@
-import chromedriver_autoinstaller, os, uuid, random, smtplib, time
-from datetime import date
+import chromedriver_autoinstaller, os, uuid, random, smtplib, time, re
+from datetime import date, datetime, time as datetime_time
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from email.mime.text import MIMEText
@@ -21,9 +21,17 @@ password = os.environ['GMAIL_APP_PW'] # https://myaccount.google.com/apppassword
 
 num_iterations = 10
 day_of_month='28'
-num_of_guests=3
-location = 'Tokyo'
-#location = 'Osaka'
+num_of_guests=2
+location = 'Osaka'
+#location = 'Tokyo'
+
+target_slot_rules = {
+    date(2026, 7, 28): datetime_time(17, 30),
+    date(2026, 7, 29): None,
+    date(2026, 7, 30): None,
+}
+calendar_months_to_scan = {(2026, 6), (2026, 7)}
+max_calendar_pages_to_scan = 2
 
 magic_cell = ''
 
@@ -33,6 +41,54 @@ display.start()
 chromedriver_autoinstaller.install()  # Check if the current version of chromedriver exists
                                       # and if it doesn't exist, download it automatically,
                                       # then add chromedriver to path
+
+def parse_calendar_month(page_text):
+    match = re.search(r'(\d{4})\s*年\s*(\d{1,2})\s*月', page_text)
+    if not match:
+        return None
+    return int(match.group(1)), int(match.group(2))
+
+def parse_calendar_day(cell_text):
+    match = re.search(r'\b(\d{1,2})\b', cell_text)
+    if not match:
+        return None
+    return int(match.group(1))
+
+def parse_slot_times(cell_text):
+    return [
+        datetime.strptime(match, '%H:%M').time()
+        for match in re.findall(r'\b\d{1,2}:\d{2}\b', cell_text)
+    ]
+
+def matches_target_slot(cell_text, calendar_month):
+    if calendar_month is None:
+        return False
+
+    day = parse_calendar_day(cell_text)
+    if day is None:
+        return False
+
+    try:
+        slot_date = date(calendar_month[0], calendar_month[1], day)
+    except ValueError:
+        return False
+    if slot_date not in target_slot_rules:
+        return False
+
+    earliest_time = target_slot_rules[slot_date]
+    if earliest_time is None:
+        return True
+
+    slot_times = parse_slot_times(cell_text)
+    return any(slot_time >= earliest_time for slot_time in slot_times)
+
+def click_next_month(driver):
+    for link_text in ['Next Month', '次月', '翌月']:
+        for element in driver.find_elements(By.PARTIAL_LINK_TEXT, link_text):
+            if element.is_displayed():
+                element.click()
+                return True
+    return False
 
 def send_email(avail_slots, filename):
     try:
@@ -112,21 +168,32 @@ def create_booking(day_of_month, num_of_guests, location):
         select.select_by_index(num_of_guests)
         #time.sleep(random.randint(5, 10))
 
-        # Check if the updated page indicates availability
-        soup = BeautifulSoup(driver.page_source, "html.parser")
-        # Find all calendar-day-cell elements
-        calendar_cells = soup.find_all("li")
-        #calendar_cells = soup.find_all("li", class_="calendar-day-cell")
-      
         available = False
-        # Check each calendar cell for availability
         available_slots = []
         global magic_cell
-        for cell in calendar_cells:
-            if "(full)" not in cell.text.lower() and "n/a" not in cell.text.lower():
-                available_slots.append(cell.text.strip())
-                available = True
-                magic_cell = cell.text
+        for scan_count in range(max_calendar_pages_to_scan):
+            # Check if the updated page indicates availability
+            calendar_month = parse_calendar_month(driver.page_source)
+            soup = BeautifulSoup(driver.page_source, "html.parser")
+            # Find all calendar-day-cell elements
+            calendar_cells = soup.find_all("li")
+            #calendar_cells = soup.find_all("li", class_="calendar-day-cell")
+
+            if calendar_month in calendar_months_to_scan:
+                # Check each calendar cell for availability
+                for cell in calendar_cells:
+                    if "(full)" not in cell.text.lower() and "n/a" not in cell.text.lower() and matches_target_slot(cell.text, calendar_month):
+                        available_slots.append(cell.text.strip())
+                        available = True
+                        magic_cell = cell.text
+
+            if calendar_month == (2026, 7):
+                break
+            if scan_count + 1 >= max_calendar_pages_to_scan:
+                break
+            if not click_next_month(driver):
+                break
+            time.sleep(random.randint(2, 3))
 
         # scroll down before taking screenshot
         driver.execute_script('document.getElementsByTagName("html")[0].style.scrollBehavior = "auto"')
