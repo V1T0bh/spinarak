@@ -2,10 +2,14 @@ name: Spinarak bot
 
 on:
   schedule:
-    - cron: '*/1 * * * *'
+    - cron: '*/5 * * * *'
   push:
     branches: [ 'main' ] 
   workflow_dispatch:
+
+concurrency:
+  group: spinarak-bot
+  cancel-in-progress: true
 
 jobs:
   run-spinarak:
@@ -15,12 +19,22 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    - name: Set up Chrome
+      uses: browser-actions/setup-chrome@v1
       
     - name: Install dependencies
       run: |
         # font package needed for Japanese to render in captured screenshots
+        sudo apt-get update
         sudo apt-get install fonts-noto-cjk
-        pip install chromedriver-autoinstaller selenium pyvirtualdisplay beautifulsoup4
+        python -m pip install --upgrade pip
+        pip install selenium beautifulsoup4
         
     - name: Run Python Selenium script
       env:
@@ -44,6 +58,6 @@ jobs:
           git config --global user.name '${{github.actor}}'
           git config --global user.email '${{github.actor}}@users.noreply.github.com'
           git add --all
-          git commit -am "Screenshot(s)"
-          #git pull
-          git push --force
+          git commit -m "Screenshot(s)"
+          git pull --rebase
+          git push

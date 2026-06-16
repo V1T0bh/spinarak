@@ -6,7 +6,7 @@
 
 You still have to manually complete the last step in the booking process. For this reason, I highly recommend having push notifcations enabled on your phone email app. This way you can click the reservation link that gets automatically emailed to you ASAP.
 
-Spinarak uses Selenium WebDriver to get around the Pokemon Cafe's site anti-automation controls. You won't be able to easily parse the server responses using curl or similar.
+Spinarak uses Selenium WebDriver with headless Chrome to get around the Pokemon Cafe's site anti-automation controls. You won't be able to easily parse the server responses using curl or similar.
 
 For fun, Spinarak stores screenshots of hits under the `/hits/` directory of the repo.
 
@@ -17,10 +17,10 @@ For fun, Spinarak stores screenshots of hits under the `/hits/` directory of the
 4. Store your GMail settings as GitHub Action secrets:
   - `GMAIL_APP_PW`
   - `GMAIL_RECIPIENT`
-  - `GMAIL_RECIPIENT_2`
+  - `GMAIL_RECIPIENT_2` (optional)
   - `GMAIL_SENDER`
 4. Update the `cron` line on `spinarak.yml` to suit your needs. The more frequent the action runs, the more likely Spinarak will find an open slot
-5. By default Sinarak checks Osaka for a party of 2. The current target slots are July 28 at 17:30 or later, July 29 anytime, and July 30 anytime. You can change these by updating `location`, `num_of_guests`, and `target_slot_rules` in `spinarak.py`
+5. By default Spinarak checks Osaka for a party of 2. The current target slots are July 28 at 17:30 or later, July 29 anytime, and July 30 anytime. You can change these by updating `LOCATION`, `NUM_OF_GUESTS`, and `TARGET_SLOT_RULES` in `spinarak.py`
 
 ## Billing portential warning
 Please note that if you fork this repo as a private repo, you may go above your free Actions minutes which means **you'll be billed**.
